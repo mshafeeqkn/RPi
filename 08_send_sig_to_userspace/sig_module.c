@@ -13,11 +13,15 @@
 #include <linux/kobject.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/sched.h>
 
 #define FIRST_MINOR             0
 #define NUM_MINOR               1
-#define DEV_DRIVER_NAME         "wq_dev"
-#define DEV_DRIVER_CLASS        "wq_class"
+#define DEV_DRIVER_NAME         "sig_dev"
+#define DEV_DRIVER_CLASS        "sig_class"
+
+#define REGISTER_APP            _IO('R', 'g')
+#define SIG_NUM                 44
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Robert W. Oliver II");
@@ -26,10 +30,12 @@ MODULE_VERSION("0.01");
 
 typedef unsigned int uint;
 
-static int  wq_open(struct inode *inode, struct file *file);
-static int  wq_release(struct inode *inode, struct file *file);
-static ssize_t wq_write(struct file *f, const char __user *buf,
+static int  sig_open(struct inode *inode, struct file *file);
+static int  sig_release(struct inode *inode, struct file *file);
+static ssize_t sig_write(struct file *f, const char __user *buf,
                                     size_t len, loff_t *off);
+static long int sig_ioctl(struct file *file, unsigned int cmd,
+                               unsigned long arg);
 
 typedef enum {
     CL_CDEV_ADD,
@@ -40,35 +46,63 @@ typedef enum {
 
 static struct file_operations fops = {
     .owner   = THIS_MODULE,
-    .open    = wq_open,
-    .release = wq_release,
-    .write   = wq_write,
+    .open    = sig_open,
+    .release = sig_release,
+    .write   = sig_write,
+    .unlocked_ioctl   = sig_ioctl,
 };
 
 static dev_t             dev         = 0;
-static struct cdev       wq_cdev;
+static struct cdev       sig_cdev;
 static struct class     *dev_class;
 static struct device    *dev_device;
-static int               module_var  = 0;
+static struct task_struct *task      = NULL;
 
-static int  wq_open(struct inode *inode, struct file *file)
+static int  sig_open(struct inode *inode, struct file *file)
 {
     pr_info("Device File Opened...!!!\n");
     return 0;
 }
 
-static int  wq_release(struct inode *inode, struct file *file)
+static int  sig_release(struct inode *inode, struct file *file)
 {
     pr_info("Device File Closed...!!!\n");
     return 0;
 }
 
-static ssize_t wq_write(struct file *f, const char __user *buf,
+static ssize_t sig_write(struct file *f, const char __user *buf,
                                     size_t len, loff_t *off)
 {
-    module_var = simple_strtol(buf, NULL, 10);
+    struct siginfo info;
+    int module_var;
 
+    module_var = simple_strtol(buf, NULL, 10);
+    if(module_var == 44) {
+        if(task != NULL) {
+            memset(&info, 0, sizeof(info));
+            info.si_signo = SIG_NUM;
+            info.si_code = SI_QUEUE;
+
+            if(send_sig_info(SIG_NUM, (struct kernel_siginfo *)&info, task) < 0) {
+                pr_err("Failed to send the signal\n");
+            } else {
+                pr_info("Singal sent to user application\n");
+            }
+        } else {
+            pr_err("User application is not running\n");
+        }
+    }
     return len;
+}
+
+static long int sig_ioctl(struct file *file, unsigned int cmd,
+                               unsigned long arg)
+{
+    if(cmd == REGISTER_APP) {
+        task = get_current();
+        pr_info("Userspace application registered: PID: %d\n", task->pid);
+    }
+    return 0;
 }
 
 static void cleanup_driver(cleanup_point_t cl)
@@ -76,6 +110,7 @@ static void cleanup_driver(cleanup_point_t cl)
     switch(cl) {
         case CL_COMPLETE:
             device_destroy(dev_class, dev);
+            task = NULL;
 
         __attribute__((__fallthrough__));
         case CL_DEVICE_CREATE:
@@ -83,7 +118,7 @@ static void cleanup_driver(cleanup_point_t cl)
 
         __attribute__((__fallthrough__));
         case CL_CLASS_CREATE:
-            cdev_del(&wq_cdev);
+            cdev_del(&sig_cdev);
 
         __attribute__((__fallthrough__));
         case CL_CDEV_ADD:
@@ -93,7 +128,7 @@ static void cleanup_driver(cleanup_point_t cl)
 
 static int init_driver(void)
 {
-    if(alloc_chrdev_region(&dev, FIRST_MINOR, NUM_MINOR, "wq_dev") < 0) {
+    if(alloc_chrdev_region(&dev, FIRST_MINOR, NUM_MINOR, "sig_dev") < 0) {
         pr_err("Allocating major number failed\n");
         return -1;
     }
@@ -101,9 +136,9 @@ static int init_driver(void)
     pr_info("Device number allocated - Major: %d; Minor: %d\n",
             MAJOR(dev), MINOR(dev));
 
-    cdev_init(&wq_cdev, &fops);
-    wq_cdev.owner = THIS_MODULE;
-    if((cdev_add(&wq_cdev, dev, NUM_MINOR)) < 0) {
+    cdev_init(&sig_cdev, &fops);
+    sig_cdev.owner = THIS_MODULE;
+    if((cdev_add(&sig_cdev, dev, NUM_MINOR)) < 0) {
         pr_err("Failed to add the device\n");
         cleanup_driver(CL_CDEV_ADD);
         return -1;
@@ -130,7 +165,7 @@ static int __init sig_start(void)
 {
     int ret = init_driver();
     if(ret == 0) {
-        printk(KERN_INFO "wq_module Loaded\n");
+        pr_info("sig_module Loaded\n");
     }
     return ret;
 }
@@ -138,7 +173,7 @@ static int __init sig_start(void)
 static void __exit sig_end(void)
 {
     cleanup_driver(CL_COMPLETE);
-    printk(KERN_INFO "Goodbye Mr.\n");
+    pr_info("Goodbye Mr.\n");
 }
 
 module_init(sig_start);
