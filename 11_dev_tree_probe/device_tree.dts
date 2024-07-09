@@ -2,13 +2,13 @@
 /plugin/;
 
 / {
-    compatible = "shafeeque,dtb_sample";
+    compatible = "brcm,bcm2711";
     fragment@0 {
         target-path = "/";
         __overlay__ {
-            my_dt_device {
+            my_device {
                 compatible = "mydevice,sample";
-                status = "up";
+                status = "okay";
                 label = "Learn DTB";
                 my_value = <1200>;
             };
