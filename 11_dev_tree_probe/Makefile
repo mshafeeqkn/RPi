@@ -13,5 +13,8 @@ dt: $(dts-file)s
 	dtc -@ -I dts -O dtb -o $(dts-file)bo $(dts-file)s
 
 clean:
+	rm -rf \.*.cmd Module.symvers *.mod* *.o*
+
+cleanall:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) clean
 	rm -rf $(dts-file)bo
