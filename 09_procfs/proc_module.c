@@ -15,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 
 /**
  * This kernel module create a file in procfs. Also
@@ -30,6 +31,10 @@
  *
  * The data entered can be displayed by cat /proc/names/list
  * Eg: cat /proc/names/list
+ *
+ * The list can be cleared by writing an empty string to the
+ * same file
+ * echo "" > /proc/names/list
  */
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Robert W. Oliver II");
@@ -41,8 +46,7 @@ MODULE_VERSION("0.01");
 
 typedef struct proc_dir_entry   proc_entry_t;
 typedef struct name_node {
-    struct name_node *next;
-    struct name_node *prev;
+    struct list_head list;
     unsigned int num;
     char *name;
     char *place;
@@ -51,36 +55,82 @@ typedef struct name_node {
 
 static proc_entry_t *proc_dir;
 static proc_entry_t *proc_name_list;
-static name_t *head = NULL;
+static LIST_HEAD(name_list);
+
 
 static ssize_t procfs_write(struct file *f, const char *buffer,
                                     size_t count, loff_t *off);
-static ssize_t procfs_read(struct file *f, char *buffer,
-                                    size_t count, loff_t *off);
-static struct proc_ops ops = {
-    .proc_read = procfs_read,
+static int      procfs_open(struct inode *, struct file *);
+
+static const struct proc_ops ops = {
+    .proc_open = procfs_open,
+    .proc_read = seq_read,
     .proc_write = procfs_write,
 };
 
-static ssize_t procfs_read(struct file *f, char *buffer,
-                                    size_t count, loff_t *off)
+static void* name_seq_start(struct seq_file *m, loff_t *pos);
+static void  name_seq_stop(struct seq_file *m, void *v) {}
+static void* name_seq_next(struct seq_file *m, void *v, loff_t *pos);
+static int   name_seq_show(struct seq_file *m, void *v);
+
+static const struct seq_operations seq_ops = {
+    .start = name_seq_start,
+    .stop  = name_seq_stop,
+    .next  = name_seq_next,
+    .show  = name_seq_show,
+};
+
+static void clear_list(void)
 {
-    if(*off > 0) {
-        // Run only once
-        return 0;   // EOF
+    name_t *node, *tmp;
+
+    list_for_each_entry_safe(node, tmp, &name_list, list) {
+        list_del(&node->list);
+        if(node->name != NULL)
+            kfree(node->name);
+
+        if(node->place != NULL)
+            kfree(node->place);
+        kfree(node);
+    }
+}
+
+static int procfs_open(struct inode *node, struct file *f)
+{
+    return seq_open(f, &seq_ops);
+}
+
+void *name_seq_start(struct seq_file *f, loff_t *pos)
+{
+    name_t *node;
+    loff_t i = 0;
+
+    list_for_each_entry(node, &name_list, list) {
+        if(i++ == *pos) {
+            return node;
+        }
     }
 
-    if(NULL == head) {
-        pr_err("No entries found");
-        return -ENOEXEC;
+    return NULL;
+}
+
+static void* name_seq_next(struct seq_file *m, void *v, loff_t *pos)
+{
+    name_t *node = (name_t *)v;
+
+    (*pos)++;
+    if (list_is_last(&node->list, &name_list)) {
+        return NULL;
     }
 
-    count = snprintf(buffer, count, "%32s - %32s - %4u\n",
-            head->name, head->place, head->age);
+    return list_next_entry(node, list);
+}
 
-    *off += count;
-
-    return count;
+static int   name_seq_show(struct seq_file *m, void *v)
+{
+    name_t *node = (name_t *)v;
+    seq_printf(m, "%s\t%s\t%d\n", node->name, node->place, node->age);
+    return 0;
 }
 
 static ssize_t procfs_write(struct file *f, const char *buffer,
@@ -90,37 +140,41 @@ static ssize_t procfs_write(struct file *f, const char *buffer,
     char place[PLACE_MAX_LEN];
     unsigned int age;
     int ret, len;
+    name_t *name_node;
 
     ret = sscanf(buffer, "%s %s %u", name, place, &age);
-    if(ret < 3) {
+    if(ret == 1) {
+        clear_list();
+        return count;
+    } else if(ret < 3) {
         return -EINVAL;
     }
 
-    if(head == NULL) {
-        head = kzalloc(sizeof(name_t), GFP_KERNEL);
-        if(NULL == head) {
-            pr_err("Unable to allocate structure memory\n");
-            return -ENOMEM;
-        }
-
-        len = strlen(name);
-        head->name = kzalloc(len, GFP_KERNEL);
-        if(NULL == head->name) {
-            pr_err("Unable to allocate name memory\n");
-            return -ENOMEM;
-        }
-        strncpy(head->name, name, len);
-
-        len = strlen(place);
-        head->place = kzalloc(len, GFP_KERNEL);
-        if(NULL == head->place) {
-            pr_err("Unable to allocate place memory\n");
-            return -ENOMEM;
-        }
-        strncpy(head->place, place, len);
-
-        head->age = age;
+    name_node = kzalloc(sizeof(name_t), GFP_KERNEL);
+    if(NULL == name_node) {
+        pr_err("Unable to allocate structure memory\n");
+        return -ENOMEM;
     }
+
+    len = strlen(name);
+    name_node->name = kzalloc(len + 1, GFP_KERNEL);
+    if(NULL == name_node->name) {
+        pr_err("Unable to allocate name memory\n");
+        return -ENOMEM;
+    }
+    strncpy(name_node->name, name, len);
+
+    len = strlen(place);
+    name_node->place = kzalloc(len + 1, GFP_KERNEL);
+    if(NULL == name_node->place) {
+        pr_err("Unable to allocate place memory\n");
+        return -ENOMEM;
+    }
+    strncpy(name_node->place, place, len);
+
+    name_node->age = age;
+    list_add_tail(&name_node->list, &name_list);
+
     return count;
 }
 
@@ -147,16 +201,7 @@ static void __exit proc_end(void)
 {
     proc_remove(proc_name_list);
     proc_remove(proc_dir);
-    if(NULL != head) {
-        if(head->name != NULL)
-            kfree(head->name);
-
-        if(head->place != NULL)
-            kfree(head->place);
-
-        kfree(head);
-        head = NULL;
-    }
+    clear_list();
     pr_info("proc_end: Goodbye Mr.\n");
 }
 
