@@ -10,7 +10,6 @@
 #define DEVICE_NAME     "drv_gpio"
 #define CLASS_NAME      "drv_gpio_class"
 #define STATIC_MAJOR    64
-#define DATA_LEN        32
 
 #define GPIO_LED        516
 #define GPIO_SWITCH     1
@@ -20,7 +19,6 @@ static dev_t            dev_file;
 
 static struct class    *char_class = NULL;
 static struct device   *char_device = NULL;
-static char             data[DATA_LEN] = "This is sample message\n";
 static struct task_struct *task;
 static unsigned long   delay = 1000;
 
@@ -62,6 +60,9 @@ static struct file_operations fops = {
 };
 
 static int __init simple_drv_readtest_init(void) {
+    struct gpio_desc *desc;
+    int ret;
+
     // use below line to allocate a major number dynamically
     // major_num = register_chrdev(0, DEVICE_NAME, &fops);
     major_num = register_chrdev(STATIC_MAJOR, DEVICE_NAME, &fops);
@@ -77,7 +78,7 @@ static int __init simple_drv_readtest_init(void) {
     }
 
     // Register class driver
-    char_class = class_create(CLASS_NAME);
+    char_class = class_create(THIS_MODULE, CLASS_NAME);
     if( IS_ERR(char_class)) {
         goto class_create_fail;
     }
@@ -103,10 +104,9 @@ static int __init simple_drv_readtest_init(void) {
         goto gpio_led_failed;
     }
 
-    struct gpio_desc *desc = gpio_to_desc(GPIO_LED);
+    desc = gpio_to_desc(GPIO_LED);
     printk( KERN_ALERT "Descriptor ret: %p\n", desc);
 
-    int ret;
     if((ret = gpio_request(GPIO_LED, "rpi-gpio-led"))) {
         printk( KERN_ALERT "Cannot allocate GPIO_LED(%d); ret: %d\n", GPIO_LED, ret);
         goto gpio_led_failed;

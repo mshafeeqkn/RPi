@@ -43,13 +43,14 @@ static int drv_open(struct inode *device_file, struct file *instance) {
 
 static ssize_t drv_write(struct file *f, const char *buffer, size_t count, loff_t *offs) {
     size_t msg_len = count;
+    int pending;
 
     if( count > MESSAGE_LEN) {
         msg_len = MESSAGE_LEN;
     }
 
     memset(msg, 0, sizeof(msg));
-    int pending = copy_from_user(msg, buffer, msg_len);
+    pending = copy_from_user(msg, buffer, msg_len);
 
     msg_len -= pending;
 
@@ -79,7 +80,7 @@ static int __init simple_drv_readtest_init(void) {
     }
 
     // Register class driver
-    char_class = class_create(CLASS_NAME);
+    char_class = class_create(THIS_MODULE, CLASS_NAME);
     if( IS_ERR(char_class)) {
         unregister_chrdev(major_num, DEVICE_NAME);
         return PTR_ERR(char_class);

@@ -4,6 +4,7 @@
 // covered in the next example.
 
 #include <linux/module.h>
+#include <linux/fs.h>
 
 #define DEVICE_NAME     "drv_device_num"
 #define CLASS_NAME      "device_num_class"
