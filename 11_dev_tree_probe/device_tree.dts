@@ -1,0 +1,17 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2711";
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            my_device {
+                compatible = "mydevice,sample";
+                status = "okay";
+                label = "Learn DTB";
+                my_value = <1200>;
+            };
+        };
+    };
+};
