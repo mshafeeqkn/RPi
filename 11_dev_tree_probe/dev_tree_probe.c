@@ -41,7 +41,7 @@ static struct platform_driver my_driver = {
     .probe = dev_tree_probe,
     .remove = dev_tree_remove,
     .driver = {
-        .name = "my_device_driver",
+        .name = "shafeeque_driver",
         .of_match_table = my_dev_ids,
     },
 };
