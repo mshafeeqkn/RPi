@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2711";
+
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            my_gpio {
+                compatible = "gpio4,customization";
+                gpios = <&gpio 4 0>;
+                status = "okay";
+                default-state = "on";
+            };
+        };
+    };
+};
+
