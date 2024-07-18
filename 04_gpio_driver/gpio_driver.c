@@ -78,7 +78,7 @@ static int __init simple_drv_readtest_init(void) {
     }
 
     // Register class driver
-    char_class = class_create(THIS_MODULE, CLASS_NAME);
+    char_class = class_create(CLASS_NAME);
     if( IS_ERR(char_class)) {
         goto class_create_fail;
     }
