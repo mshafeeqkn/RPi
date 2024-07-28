@@ -19,28 +19,38 @@ static uint8_t stm_data[2] = {0};
 
 #define     STM_OFF_TIME        _IOW('i', 0, uint8_t)
 #define     STM_ON_TIME         _IOW('i', 1, uint8_t)
-#define     STM_START_BLINK     _IO('i', 2)
+#define     STM_START_BLINK     _IO ('i', 2)
+#define     STM_GET_TIME        _IOR('i', 3, uint8_t*)
 
 #define     ON_INDEX            0
 #define     OFF_INDEX           1
 
 
 static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int arg) {
+    pr_info("New ioctl command: %x - %lx\n", cmd, arg);
     switch(cmd) {
         case STM_OFF_TIME:
             if (copy_from_user(&stm_data[ON_INDEX], (uint8_t __user *)arg, 1)) {
 			    return -EFAULT;
             }
             break;
+
         case STM_ON_TIME:
             if (copy_from_user(&stm_data[OFF_INDEX], (uint8_t __user *)arg, 1)) {
 			    return -EFAULT;
             }
             break;
+
         case STM_START_BLINK:
             break;
+
+        case STM_GET_TIME:
+            if(copy_to_user((uint8_t __user*)arg, stm_data, 2)) {
+                return -EFAULT;
+            }
+
         default:
-            return copy_to_user((uint8_t __user*)arg, stm_data, 2);
+            break;
     }
     return 0;
 }
