@@ -3,6 +3,7 @@
 #include <linux/fs.h>
 #include <linux/device.h>
 #include <linux/uaccess.h>
+#include <linux/i2c.h>
 
 #define DEVICE_NAME     "stm32f103_dev"
 #define CLASS_NAME      "stm32f103_class"
@@ -12,8 +13,11 @@
 static int              major_num;
 static dev_t            dev_file;
 
-static struct class    *char_class = NULL;
-static struct device   *char_device = NULL;
+static struct class*            char_class = NULL;
+static struct device*           char_device = NULL;
+static struct i2c_adapter*      stm_adapter = NULL;
+static struct i2c_client*       stm_client = NULL;
+
 
 static uint8_t stm_data[2] = {0};
 
@@ -25,6 +29,9 @@ static uint8_t stm_data[2] = {0};
 #define     ON_INDEX            0
 #define     OFF_INDEX           1
 
+static struct i2c_board_info stm_board_info = {
+    I2C_BOARD_INFO(DEVICE_NAME, 0x14),
+};
 
 static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int arg) {
     pr_info("New ioctl command: %x - %lx\n", cmd, arg);
@@ -60,6 +67,10 @@ static struct file_operations fops = {
 };
 
 static int __init simple_drv_readtest_init(void) {
+    //
+    // STEP 1: General initialization of driver including char device
+    // allocation and file operation callback registeration (ioctl)
+    //
     major_num = register_chrdev(STATIC_MAJOR, DEVICE_NAME, &fops);
     if( major_num < 0 ) {
         pr_err("Failed to register the device number\n");
@@ -88,15 +99,38 @@ static int __init simple_drv_readtest_init(void) {
     if( IS_ERR(char_device) ) {
         class_destroy(char_class);
         unregister_chrdev(major_num, DEVICE_NAME);
-        pr_info("Failed to create the device\n" );
+        pr_err("Failed to create the device\n" );
         return PTR_ERR(char_device);
     }
 
+    //
+    // STEP 2: Add I2C device into the i2C subsystem
+    //
+    stm_adapter = i2c_get_adapter(1);
+    if(stm_adapter == NULL) {
+        device_destroy(char_class, dev_file);
+        class_destroy(char_class);
+        unregister_chrdev(major_num, DEVICE_NAME);
+        pr_err("Failed to get the i2c adapter\n" );
+        return -ENODEV;
+    }
+
+    stm_client = i2c_new_client_device(stm_adapter, &stm_board_info);
+    if(IS_ERR(stm_client)) {
+        device_destroy(char_class, dev_file);
+        class_destroy(char_class);
+        unregister_chrdev(major_num, DEVICE_NAME);
+        pr_err("Failed to create client device\n" );
+        return PTR_ERR(char_device);
+    }
+
+    i2c_put_adapter(stm_adapter);
     pr_info("Success..!!!! Device driver created successfully\n");
     return 0;
 }
 
 static void __exit simple_drv_readtest_exit(void) {
+    i2c_unregister_device(stm_client);
     device_destroy(char_class, dev_file);
     class_unregister(char_class);
     class_destroy(char_class);
