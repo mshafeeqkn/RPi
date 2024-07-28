@@ -21,15 +21,17 @@ static struct i2c_adapter*      stm_adapter = NULL;
 static struct i2c_client*       stm_client = NULL;
 
 
-static uint8_t stm_data[2] = {0};
+static uint8_t stm_data[3] = {0};
 
 #define     STM_OFF_TIME        _IOW('i', 0, uint8_t)
 #define     STM_ON_TIME         _IOW('i', 1, uint8_t)
-#define     STM_START_BLINK     _IO ('i', 2)
-#define     STM_GET_TIME        _IOR('i', 3, uint8_t*)
+#define     STM_REPEAT          _IOW('i', 2, uint8_t)
+#define     STM_START_BLINK     _IO ('i', 3)
+#define     STM_GET_TIME        _IOR('i', 4, uint8_t*)
 
 #define     ON_INDEX            0
 #define     OFF_INDEX           1
+#define     RPT_INDEX           2
 
 static struct i2c_board_info stm_board_info = {
     I2C_BOARD_INFO(DEVICE_NAME, STM32_I2C_ADDR),
@@ -40,27 +42,32 @@ static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int a
 
     switch(cmd) {
         case STM_OFF_TIME:
-            if (copy_from_user(&stm_data[ON_INDEX], (uint8_t __user *)arg, 1)) {
-			    return -EFAULT;
-            }
-            break;
-
-        case STM_ON_TIME:
             if (copy_from_user(&stm_data[OFF_INDEX], (uint8_t __user *)arg, 1)) {
 			    return -EFAULT;
             }
             break;
 
+        case STM_ON_TIME:
+            if (copy_from_user(&stm_data[ON_INDEX], (uint8_t __user *)arg, 1)) {
+			    return -EFAULT;
+            }
+            break;
+
+        case STM_REPEAT:
+            if (copy_from_user(&stm_data[RPT_INDEX], (uint8_t __user *)arg, 1)) {
+			    return -EFAULT;
+            }
+            break;
+
         case STM_START_BLINK:
-            ret = i2c_master_send(stm_client, stm_data, 2);
+            ret = i2c_master_send(stm_client, stm_data, 3);
             if(ret < 0) {
                 return -EFAULT;
             }
-            pr_info("data sent: %02X, %02X\n", stm_data[0], stm_data[1]);
             break;
 
         case STM_GET_TIME:
-            if(copy_to_user((uint8_t __user*)arg, stm_data, 2)) {
+            if(copy_to_user((uint8_t __user*)arg, stm_data, 3)) {
                 return -EFAULT;
             }
 
