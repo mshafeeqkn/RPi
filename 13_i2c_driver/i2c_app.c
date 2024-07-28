@@ -10,6 +10,9 @@
 #define     STM_START_BLINK     _IO ('i', 2)
 #define     STM_GET_TIME        _IOR('i', 3, uint8_t*)
 
+#define     ON_INDEX            0
+#define     OFF_INDEX           1
+
 int main(int argc ,char *argv[]) {
     int fd;
     uint8_t delay, kern_data[2] = {0};
@@ -24,21 +27,30 @@ int main(int argc ,char *argv[]) {
     if(argc == 3) {
         // Set the parameter value
         delay = atoi(argv[1]);
-        if (ioctl(fd, STM_OFF_TIME, &delay) == -1) {
+        if (ioctl(fd, STM_ON_TIME, &delay) == -1) {
             perror("Failed to set on parameter");
             close(fd);
             return -1;
         }
+        kern_data[ON_INDEX] = delay;
         printf("ON time value is  %d\n", delay);
 
         // Get the parameter value
         delay = atoi(argv[2]);
-        if (ioctl(fd, STM_ON_TIME, &delay) == -1) {
+        if (ioctl(fd, STM_OFF_TIME, &delay) == -1) {
             perror("Failed to set off parameter");
             close(fd);
             return -1;
         }
+        kern_data[OFF_INDEX] = delay;
         printf("OFF time value is %d\n", delay);
+
+        if (ioctl(fd, STM_START_BLINK, &kern_data) == -1) {
+            perror("Failed to set on parameter");
+            close(fd);
+            return -1;
+        }
+        printf("Data sent to the STM board\n", delay);
     } else if(argc == 1) {
 
         // Get the parameter value

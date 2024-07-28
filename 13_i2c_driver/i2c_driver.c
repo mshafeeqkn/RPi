@@ -9,6 +9,8 @@
 #define CLASS_NAME      "stm32f103_class"
 #define STATIC_MAJOR    64
 #define MESSAGE_LEN     24
+#define STM32_I2C_ADDR  0x14
+
 
 static int              major_num;
 static dev_t            dev_file;
@@ -30,11 +32,12 @@ static uint8_t stm_data[2] = {0};
 #define     OFF_INDEX           1
 
 static struct i2c_board_info stm_board_info = {
-    I2C_BOARD_INFO(DEVICE_NAME, 0x14),
+    I2C_BOARD_INFO(DEVICE_NAME, STM32_I2C_ADDR),
 };
 
 static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int arg) {
-    pr_info("New ioctl command: %x - %lx\n", cmd, arg);
+    int ret;
+
     switch(cmd) {
         case STM_OFF_TIME:
             if (copy_from_user(&stm_data[ON_INDEX], (uint8_t __user *)arg, 1)) {
@@ -49,6 +52,11 @@ static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int a
             break;
 
         case STM_START_BLINK:
+            ret = i2c_master_send(stm_client, stm_data, 2);
+            if(ret < 0) {
+                return -EFAULT;
+            }
+            pr_info("data sent: %02X, %02X\n", stm_data[0], stm_data[1]);
             break;
 
         case STM_GET_TIME:
