@@ -1,0 +1,21 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&i2c1>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+
+            my_i2c_device: my_i2c_device@14 {
+                compatible = "my,i2c-slave-device";
+                reg = <0x14>;
+            };
+        };
+    };
+};
+
