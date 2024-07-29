@@ -144,7 +144,7 @@ static int init_driver(void)
         return -1;
     }
 
-    dev_class = class_create(THIS_MODULE, DEV_DRIVER_CLASS);
+    dev_class = class_create(DEV_DRIVER_CLASS);
     if(IS_ERR(dev_class)) {
         pr_err("Dev class create failed\n");
         cleanup_driver(CL_CLASS_CREATE);
