@@ -26,7 +26,7 @@ static struct device* i2c_device = NULL;
 static int    major_number;
 
 static const struct of_device_id my_i2c_of_match[] = {
-    { .compatible = "my,i2c-slave-device" },
+    { .compatible = "stm,stm32-i2c-slave" },
     { }
 };
 MODULE_DEVICE_TABLE(of, my_i2c_of_match);

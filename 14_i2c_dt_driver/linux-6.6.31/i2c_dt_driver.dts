@@ -1,0 +1,46 @@
+/dts-v1/;
+/plugin/;
+
+/**
+We are overriding the following node from  broadcom/bcm283x.dtsi
+
+soc {
+    compatible = "simple-bus";
+    #address-cells = <1>;
+    #size-cells = <1>;
+
+    i2c1: i2c@7e804000 {
+        compatible = "brcm,bcm2835-i2c";
+        reg = <0x7e804000 0x1000>;
+        interrupts = <2 21>;
+        clocks = <&clocks BCM2835_CLOCK_VPU>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+        status = "disabled";
+    };
+};
+*/
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&i2c1>;
+        __overlay__ {
+            // The address-cells and size-cells should be added
+            // for better readability. these informations denotes
+            // the number of cells (one cell is a 4 byte integer
+            // for the raspberry pi 4-b; it may change in other
+            // platforms)
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+
+            my_i2c_device: my_i2c_device@14 {
+                compatible = "stm,stm32-i2c-slave";
+                reg = <0x14>;
+            };
+        };
+    };
+};
+
