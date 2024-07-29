@@ -7,13 +7,11 @@
 
 #define     STM_OFF_TIME        _IOW('i', 0, uint8_t)
 #define     STM_ON_TIME         _IOW('i', 1, uint8_t)
-#define     STM_REPEAT          _IOW('i', 2, uint8_t)
 #define     STM_START_BLINK     _IO ('i', 3)
 #define     STM_GET_TIME        _IOR('i', 4, uint8_t*)
 
 #define     ON_INDEX            0
 #define     OFF_INDEX           1
-#define     RPT_INDEX           2
 
 int main(int argc ,char *argv[]) {
     int fd;
@@ -26,7 +24,7 @@ int main(int argc ,char *argv[]) {
         return -1;
     }
 
-    if(argc == 4) {
+    if(argc == 3) {
         // Set the parameter value
         tmp = atoi(argv[1]);
         if (ioctl(fd, STM_ON_TIME, &tmp) == -1) {
@@ -47,16 +45,6 @@ int main(int argc ,char *argv[]) {
         kern_data[OFF_INDEX] = tmp;
         printf("OFF time value is %d\n", tmp);
 
-        // Get the parameter value
-        tmp = atoi(argv[3]);
-        if (ioctl(fd, STM_REPEAT, &tmp) == -1) {
-            perror("Failed to set repeat parameter");
-            close(fd);
-            return -1;
-        }
-        kern_data[RPT_INDEX] = tmp;
-        printf("repeat count is %d\n", tmp);
-
         if (ioctl(fd, STM_START_BLINK, &kern_data) == -1) {
             perror("Failed to set on parameter");
             close(fd);
@@ -71,8 +59,8 @@ int main(int argc ,char *argv[]) {
             close(fd);
             return -1;
         }
-        printf("Blink data:\nON Time:%d\nOFF Time:%d\nREP Count: %d\n", 
-            kern_data[ON_INDEX], kern_data[OFF_INDEX], kern_data[RPT_INDEX]);
+        printf("Blink data:\nON Time:%d\nOFF Time:%d\n", 
+            kern_data[ON_INDEX], kern_data[OFF_INDEX]);
     } else {
         printf("Incorrect usage\n");
     }
