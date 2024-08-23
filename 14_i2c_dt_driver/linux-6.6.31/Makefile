@@ -18,3 +18,14 @@ clean:
 cleanall:
 	make -C /lib/modules/$(KVERSION)/build M=$(PWD) clean
 	rm -rf $(dts-file)bo
+
+install:
+	sudo dmesg -c > /dev/null 2>&1
+	sudo insmod i2c_dt_driver.ko
+	sudo dtoverlay $(dts-file)bo
+	sudo dmesg -c
+
+remove:
+	sudo rmmod i2c_dt_driver
+	sudo dtoverlay -R i2c_dt_driver
+	sudo dmesg -c

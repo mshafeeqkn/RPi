@@ -89,6 +89,13 @@ static const struct file_operations fops = {
 
 static int my_i2c_probe(struct i2c_client *client)
 {
+    const struct i2c_device_id *id = i2c_client_get_device_id(client);;
+    pr_info("Inside probing: [name: %s]\n", client->name);
+    if(id) {
+        pr_info("Driver data: %05lX\n", id->driver_data);
+    } else {
+        pr_err("Driver data not found\n");
+    }
     major_number = register_chrdev(0, DEVICE_NAME, &fops);
     if (major_number < 0) {
         pr_err("Failed to register a major number\n");
@@ -123,15 +130,18 @@ static void my_i2c_remove(struct i2c_client *client)
     pr_info("my_i2c_driver: remove function called\n");
 }
 
+// This is another table where we can set specific flags
+// for different drivers. The second field is used store
+// bunch of flags and those flags can be used while probing
 static const struct i2c_device_id my_i2c_id[] = {
-    { "my_i2c_device", 0 },
+    { "stm32-i2c-slave", 0xAA },
     { }
 };
 MODULE_DEVICE_TABLE(i2c, my_i2c_id);
 
 static struct i2c_driver my_i2c_driver = {
     .driver = {
-        .name = "my_i2c_device",
+        .name = DEVICE_NAME,
         .of_match_table = of_match_ptr(my_i2c_of_match),
     },
     .probe = my_i2c_probe,
