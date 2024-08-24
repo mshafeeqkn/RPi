@@ -1,0 +1,6 @@
+[submodule "13_i2c_driver/STM32-Firmware"]
+	path = 13_i2c_driver/STM32-Firmware
+	url = git@github.com:mshafeeqkn/STM32F1XX_Sample_Project.git
+[submodule "14_i2c_dt_driver/STM32-Firmware"]
+	path = 14_i2c_dt_driver/STM32-Firmware
+	url = git@github.com:mshafeeqkn/STM32F1XX_Sample_Project.git
