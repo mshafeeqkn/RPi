@@ -67,7 +67,9 @@ static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int a
             if(ret < 0) {
                 return -EFAULT;
             }
-            pr_info("Received data from STM  [%s]\n", data);
+            if(copy_to_user((uint8_t __user*)arg, data, 2)) {
+                return -EFAULT;
+            }
             break;
 
         case STM_GET_TIME:

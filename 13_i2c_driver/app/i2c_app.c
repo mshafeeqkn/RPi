@@ -51,19 +51,29 @@ int main(int argc ,char *argv[]) {
             close(fd);
             return -1;
         }
-        printf("Data sent to the STM board\n", tmp);
-    } else if(argc == 1) {
-
+        printf("Data sent to the STM board\n");
+    } else if(argc == 2 && argv[1][0] == 'r') {
         // Get the parameter value
         if (ioctl(fd, STM_GET_DATA, &kern_data) == -1) {
             perror("Failed to set off parameter");
             close(fd);
             return -1;
         }
+
+        printf("Rx from STM: %x%c\n", kern_data[ON_INDEX], kern_data[OFF_INDEX]);
+    } else if(argc == 1) {
+        if (ioctl(fd, STM_GET_TIME, &kern_data) == -1) {
+            perror("Failed to set off parameter");
+            close(fd);
+            return -1;
+        }
+
         printf("Blink data:\nON Time:%d\nOFF Time:%d\n", 
             kern_data[ON_INDEX], kern_data[OFF_INDEX]);
     } else {
         printf("Incorrect usage\n");
+        printf("app on-time off-time\n");
+        printf("app rx\n");
     }
     // Close the device
     close(fd);
