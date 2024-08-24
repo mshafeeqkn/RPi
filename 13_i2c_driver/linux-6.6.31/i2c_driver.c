@@ -27,6 +27,7 @@ static uint8_t stm_data[2] = {0};
 #define     STM_ON_TIME         _IOW('i', 1, uint8_t)
 #define     STM_START_BLINK     _IO ('i', 3)
 #define     STM_GET_TIME        _IOR('i', 4, uint8_t*)
+#define     STM_GET_DATA        _IOR('i', 5, uint8_t*)
 
 #define     ON_INDEX            0
 #define     OFF_INDEX           1
@@ -37,6 +38,7 @@ static struct i2c_board_info stm_board_info = {
 
 static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int arg) {
     int ret;
+    uint8_t data[16];
 
     switch(cmd) {
         case STM_OFF_TIME:
@@ -58,6 +60,14 @@ static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int a
             }
             pr_info("Sending data to STM: on: %d; off: %d\n",
                 stm_data[ON_INDEX], stm_data[OFF_INDEX]);
+            break;
+
+        case STM_GET_DATA:
+            ret = i2c_master_recv(stm_client, data, 15);
+            if(ret < 0) {
+                return -EFAULT;
+            }
+            pr_info("Received data from STM  [%s]\n", data);
             break;
 
         case STM_GET_TIME:

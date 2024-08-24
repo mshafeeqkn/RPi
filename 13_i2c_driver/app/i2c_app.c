@@ -9,6 +9,7 @@
 #define     STM_ON_TIME         _IOW('i', 1, uint8_t)
 #define     STM_START_BLINK     _IO ('i', 3)
 #define     STM_GET_TIME        _IOR('i', 4, uint8_t*)
+#define     STM_GET_DATA        _IOR('i', 5, uint8_t*)
 
 #define     ON_INDEX            0
 #define     OFF_INDEX           1
@@ -54,7 +55,7 @@ int main(int argc ,char *argv[]) {
     } else if(argc == 1) {
 
         // Get the parameter value
-        if (ioctl(fd, STM_GET_TIME, &kern_data) == -1) {
+        if (ioctl(fd, STM_GET_DATA, &kern_data) == -1) {
             perror("Failed to set off parameter");
             close(fd);
             return -1;
