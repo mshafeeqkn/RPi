@@ -63,7 +63,7 @@ static long int stm_ioctl(struct file *f, unsigned int cmd,  long unsigned int a
             break;
 
         case STM_GET_DATA:
-            ret = i2c_master_recv(stm_client, data, 15);
+            ret = i2c_master_recv(stm_client, data, 2);
             if(ret < 0) {
                 return -EFAULT;
             }

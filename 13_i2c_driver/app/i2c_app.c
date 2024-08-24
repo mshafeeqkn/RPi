@@ -55,15 +55,15 @@ int main(int argc ,char *argv[]) {
     } else if(argc == 2 && argv[1][0] == 'r') {
         // Get the parameter value
         if (ioctl(fd, STM_GET_DATA, &kern_data) == -1) {
-            perror("Failed to set off parameter");
+            perror("Failed to get data");
             close(fd);
             return -1;
         }
 
-        printf("Rx from STM: %x%c\n", kern_data[ON_INDEX], kern_data[OFF_INDEX]);
+        printf("Rx from STM: %c%c\n", kern_data[ON_INDEX], kern_data[OFF_INDEX]);
     } else if(argc == 1) {
         if (ioctl(fd, STM_GET_TIME, &kern_data) == -1) {
-            perror("Failed to set off parameter");
+            perror("Failed to get time parameter");
             close(fd);
             return -1;
         }
